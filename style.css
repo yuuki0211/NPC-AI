@@ -1,0 +1,4 @@
+body { margin: 0; background: #eee; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
+#game-container { position: relative; width: 90vw; height: 80vh; background: white; border: 2px solid #333; }
+#ui { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 10px; box-sizing: border-box; }
+canvas { width: 100%; height: 100%; }
