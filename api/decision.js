@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     const resultText = data.candidates[0].content.parts[0].text;
     
-    // AIの返答をそのままフロントエンドに返す
+    // AIの返答をそにままフロントエンドに返す
     res.status(200).json(JSON.parse(resultText));
   } catch (error) {
     res.status(500).json({ error: "AIの思考が遮断されました" });
