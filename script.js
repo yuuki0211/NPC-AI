@@ -1,37 +1,74 @@
 const canvas = document.getElementById('roomCanvas');
 const ctx = canvas.getContext('2d');
 
-// キャンバスのサイズ設定
 canvas.width = 400;
 canvas.height = 600;
 
-// 家具の配置（座標データ）
+// 家具の配置
 const objects = {
-    bed: { x: 50, y: 500, label: "ベッド" },
-    desk: { x: 300, y: 300, label: "机と椅子" },
-    chest: { x: 50, y: 300, label: "チェスト" }
+    bed: { x: 70, y: 530, label: "ベッド" },
+    desk: { x: 330, y: 300, label: "机と椅子" },
+    chest: { x: 70, y: 300, label: "チェスト" }
 };
 
-// 棒人間の初期位置
+// ルナの状態
 let player = { x: 200, y: 300 };
+let currentTarget = null;
+let waitTimer = 0;
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 家具を描く（図の位置を再現）
-    ctx.strokeStyle = "#333";
-    for (let key in objects) {
-        const obj = objects[key];
-        ctx.strokeRect(obj.x - 20, obj.y - 20, 40, 40);
-        ctx.fillText(obj.label, obj.x - 20, obj.y - 30);
+function update() {
+    if (waitTimer > 0) {
+        waitTimer--;
+        return;
     }
 
-    // 棒人間を描く
+    if (!currentTarget) {
+        // 目的地がない場合、ランダムで次の場所を決める
+        const keys = Object.keys(objects);
+        const nextKey = keys[Math.floor(Math.random() * keys.length)];
+        currentTarget = objects[nextKey];
+        document.getElementById('status').innerText = `ルナ: ${currentTarget.label}へ移動中...`;
+    } else {
+        // 目的地へ向かう計算
+        const dx = currentTarget.x - player.x;
+        const dy = currentTarget.y - player.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 5) {
+            // スピード調整（数値を大きくすると遅くなる）
+            player.x += dx / 30;
+            player.y += dy / 30;
+        } else {
+            // 到着！
+            document.getElementById('status').innerText = `ルナ: ${currentTarget.label}で作業中...`;
+            currentTarget = null;
+            waitTimer = 60; // 到着後、約2秒間その場で待機（60フレーム）
+        }
+    }
+}
+
+function draw() {
+    update();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 家具の描画
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    for (let key in objects) {
+        const obj = objects[key];
+        ctx.strokeRect(obj.x - 25, obj.y - 25, 50, 50);
+        ctx.fillStyle = "#333";
+        ctx.fillText(obj.label, obj.x - 20, obj.y - 35);
+    }
+
+    // 棒人間の描画
     drawStickman(player.x, player.y);
+    requestAnimationFrame(draw); // 滑らかに動かすための命令
 }
 
 function drawStickman(x, y) {
     ctx.beginPath();
+    ctx.strokeStyle = "#000";
     ctx.arc(x, y - 30, 10, 0, Math.PI * 2); // 頭
     ctx.moveTo(x, y - 20); ctx.lineTo(x, y); // 体
     ctx.moveTo(x, y - 15); ctx.lineTo(x - 10, y - 5); // 左腕
@@ -41,12 +78,5 @@ function drawStickman(x, y) {
     ctx.stroke();
 }
 
-// 1秒ごとに描画更新
-setInterval(draw, 100);
-
-// テスト用：画面をタップするとその場所に移動
-canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    player.x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    player.y = (e.clientY - rect.top) * (canvas.height / rect.height);
-});
+// 起動！
+draw();
