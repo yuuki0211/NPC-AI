@@ -4,45 +4,56 @@ const ctx = canvas.getContext('2d');
 canvas.width = 400;
 canvas.height = 600;
 
-// 家具の配置
 const objects = {
     bed: { x: 70, y: 530, label: "ベッド" },
     desk: { x: 330, y: 300, label: "机と椅子" },
     chest: { x: 70, y: 300, label: "チェスト" }
 };
 
-// ルナの状態
 let player = { x: 200, y: 300 };
 let currentTarget = null;
 let waitTimer = 0;
 
+// 【新機能】AIに次の行動を聞く関数
+async function askAI() {
+    document.getElementById('status').innerText = "ルナ: 考え中...";
+    try {
+        // 自作したNode.js APIを呼び出す
+        const response = await fetch('/api/decision');
+        const data = await response.json();
+        
+        // AIが選んだ目的地をセット
+        currentTarget = objects[data.target];
+        document.getElementById('status').innerText = `ルナ: ${data.reason}`;
+    } catch (e) {
+        console.error("AI通信失敗", e);
+        document.getElementById('status').innerText = "ルナ: 通信エラー...";
+        // 失敗したら5秒後に再試行
+        setTimeout(askAI, 5000);
+    }
+}
+
 function update() {
     if (waitTimer > 0) {
         waitTimer--;
+        if (waitTimer === 1) askAI(); // 休憩が終わったら次の行動を聞く
         return;
     }
 
     if (!currentTarget) {
-        // 目的地がない場合、ランダムで次の場所を決める
-        const keys = Object.keys(objects);
-        const nextKey = keys[Math.floor(Math.random() * keys.length)];
-        currentTarget = objects[nextKey];
-        document.getElementById('status').innerText = `ルナ: ${currentTarget.label}へ移動中...`;
+        // 最初に一回だけAIに聞く
+        if (player.x === 200 && player.y === 300) askAI();
     } else {
-        // 目的地へ向かう計算
         const dx = currentTarget.x - player.x;
         const dy = currentTarget.y - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 5) {
-            // スピード調整（数値を大きくすると遅くなる）
-            player.x += dx / 30;
-            player.y += dy / 30;
+            player.x += dx / 40;
+            player.y += dy / 40;
         } else {
-            // 到着！
-            document.getElementById('status').innerText = `ルナ: ${currentTarget.label}で作業中...`;
-            currentTarget = null;
-            waitTimer = 60; // 到着後、約2秒間その場で待機（60フレーム）
+            // 到着したら一定時間待機（ここで休憩）
+            waitTimer = 180; // 約6秒間待機
         }
     }
 }
@@ -51,9 +62,7 @@ function draw() {
     update();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 家具の描画
     ctx.strokeStyle = "#333";
-    ctx.lineWidth = 2;
     for (let key in objects) {
         const obj = objects[key];
         ctx.strokeRect(obj.x - 25, obj.y - 25, 50, 50);
@@ -61,22 +70,19 @@ function draw() {
         ctx.fillText(obj.label, obj.x - 20, obj.y - 35);
     }
 
-    // 棒人間の描画
     drawStickman(player.x, player.y);
-    requestAnimationFrame(draw); // 滑らかに動かすための命令
+    requestAnimationFrame(draw);
 }
 
 function drawStickman(x, y) {
     ctx.beginPath();
-    ctx.strokeStyle = "#000";
-    ctx.arc(x, y - 30, 10, 0, Math.PI * 2); // 頭
-    ctx.moveTo(x, y - 20); ctx.lineTo(x, y); // 体
-    ctx.moveTo(x, y - 15); ctx.lineTo(x - 10, y - 5); // 左腕
-    ctx.moveTo(x, y - 15); ctx.lineTo(x + 10, y - 5); // 右腕
-    ctx.moveTo(x, y); ctx.lineTo(x - 10, y + 15); // 左足
-    ctx.moveTo(x, y); ctx.lineTo(x + 10, y + 15); // 右足
+    ctx.arc(x, y - 30, 10, 0, Math.PI * 2);
+    ctx.moveTo(x, y - 20); ctx.lineTo(x, y);
+    ctx.moveTo(x, y - 15); ctx.lineTo(x - 10, y - 5);
+    ctx.moveTo(x, y - 15); ctx.lineTo(x + 10, y - 5);
+    ctx.moveTo(x, y); ctx.lineTo(x - 10, y + 15);
+    ctx.moveTo(x, y); ctx.lineTo(x + 10, y + 15);
     ctx.stroke();
 }
 
-// 起動！
 draw();
