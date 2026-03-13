@@ -1,21 +1,22 @@
 export default async function handler(req, res) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-  // ルナの設定（プロンプト）
-  const prompt = {
-    contents: [{
-      parts: [{
-        text: `あなたは宇宙とSFが大好きな美少女「ルナ」です。
-        部屋には「bed（ベッド）」「desk（机と椅子）」「chest（チェスト）」があります。
-        今の状況に合わせて、次に行く場所を1つ選んでください。
-        返答は必ず以下のJSON形式のみで返して。余計な説明は不要です。
-        {"target": "場所の名前(bed, desk, chestのいずれか)", "reason": "その場所で何をするかの短い理由"}`
-      }]
-    }]
-  };
-
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    // 1. キーがない場合に即座にエラーを出す（ログで確認するため）
+    if (!apiKey) {
+      return res.status(200).json({ target: "desk", reason: "APIキーが設定されていないみたい！" });
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const prompt = {
+      contents: [{
+        parts: [{
+          text: "宇宙好きの少女ルナとして、bed, desk, chestのいずれか1つをjson形式で選んで。例：{\"target\":\"desk\",\"reason\":\"読書する\"}"
+        }]
+      }]
+    };
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -23,11 +24,21 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    const resultText = data.candidates[0].content.parts[0].text;
+
+    // 2. Googleからの返答がエラーでないかチェック
+    if (data.error) {
+      console.error("Gemini Error:", data.error);
+      return res.status(200).json({ target: "bed", reason: "AIが少し疲れちゃったみたい（APIエラー）" });
+    }
+
+    let resultText = data.candidates[0].content.parts[0].text;
+    resultText = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
     
-    // AIの返答をそにままフロントエンドに返す
     res.status(200).json(JSON.parse(resultText));
+
   } catch (error) {
-    res.status(500).json({ error: "AIの思考が遮断されました" });
+    // 3. 何が起きてもフリーズさせない
+    console.error("Server Error:", error);
+    res.status(200).json({ target: "chest", reason: "エラーが起きたけど、頑張って動くよ！" });
   }
 }
