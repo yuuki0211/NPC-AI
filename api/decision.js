@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // テキスト抽出処理
+    // テキスタ抽出処理
     if (data.candidates && data.candidates[0].content) {
       let resultText = data.candidates[0].content.parts[0].text;
       resultText = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
